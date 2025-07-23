@@ -1,0 +1,5 @@
+location                = "West Europe"
+resource_group_name     = "amdp-dev-ministation-1"
+vnet_name               = "amdp-dev"
+subnet_cidr             = "10.252.20.0/28"
+security_group_ID       = "/subscriptions/21b61287-b2bd-4767-b872-b4d447d90553/resourceGroups/amdp-dev/providers/Microsoft.Network/networkSecurityGroups/amdp-dev-secure"

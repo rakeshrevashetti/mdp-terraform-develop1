@@ -1,0 +1,5 @@
+location                = "West Europe"
+resource_group_name     = "amdp-devops-jenkins"
+vnet_name               = "amdp-devops"
+subnet_cidr             = "10.250.4.0/28"
+security_group_ID       = "/subscriptions/21b61287-b2bd-4767-b872-b4d447d90553/resourceGroups/amdp-devops/providers/Microsoft.Network/networkSecurityGroups/amdp-devops-secure"

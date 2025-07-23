@@ -1,0 +1,86 @@
+pipeline {
+
+	agent{
+		label 'amdp-slave-01'
+	}
+
+    environment {
+        SECRET_KEY = credentials('JIRATOKEN1')
+    }    
+
+    options { 
+        buildDiscarder(logRotator(numToKeepStr: '1')) 
+    }
+
+    stages {
+        
+		stage('Build and package terraform files and artifacts on tag') {
+            when {
+                buildingTag()
+            }
+			steps {
+				script {
+                    buildAndPackaging("${TAG_NAME}")
+				}
+				final_packaging()
+			}
+		}
+
+        stage('Build and package terraform files and artifacts on branch') {
+            when {
+                not { buildingTag() }
+            }
+			steps {
+				script {
+
+                        shortCommit = sh(returnStdout: true, script: "git log -1 --format=%h").trim()
+                        buildAndPackaging("${shortCommit}")
+				}
+				final_packaging()
+			}
+		}
+
+        stage('Push terraform Images to Azure Storage') {
+            
+            steps {
+                script {
+                    dir('script') {
+                    
+                     git branch: 'develop',
+					 credentialsId: 'df399f88-3fa6-4eee-b376-22f940fa7bc9',
+					 url: 'https://alm.alstom.com/git/MDP/repo/mdp-devops-script'
+                     
+                    }
+                    
+                      filename = "$WORKSPACE/amdp-v2-terraform.zip"
+        
+                        sh "./script/azurestorage.sh $BRANCH_NAME $filename"
+				
+                }
+            }
+        }
+	}
+
+	post {
+		failure {
+			script {
+			sh "curl --user anurag.negi@alstomgroup.com:${SECRET_KEY} --request POST --url 'https://smartmobility.atlassian.net/rest/servicedeskapi/request' --header 'Accept: application/json' --header 'Content-Type: application/json' --data '{\"serviceDeskId\": \"3\",\"requestTypeId\": \"21\",\"requestFieldValues\":{\"summary\": \"Build failure for $JOB_NAME\",\"description\": \"Jenkins job failed for changes BUILD_NUMBER=$BUILD_NUMBER\"}}'"
+		}
+			}   
+		always {
+			cleanWs()
+		}
+	}
+}
+
+void buildAndPackaging(commit_id) {
+	sh "mkdir -p $WORKSPACE/amdp-v2-terraform/"
+    sh "cp -r $WORKSPACE/modules/ $WORKSPACE/multi-node $WORKSPACE/amdp-v2-terraform/"
+
+    sh "zip -r amdp-v2-terraform.zip amdp-v2-terraform"
+
+}
+
+void final_packaging() {
+	archiveArtifacts artifacts: "amdp-v2-terraform.zip", fingerprint: true
+}
